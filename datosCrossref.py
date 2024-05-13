@@ -1,43 +1,43 @@
-import requests
+from habanero import Crossref
+import datetime
+import re
 from pyspark.sql import SparkSession
 from pyspark.sql.types import StructType, StructField, StringType
 
-def fetch_latest_dois(num_dois):
-    url = f'https://api.crossref.org/works?sort=created&order=desc&rows={num_dois}'
-    response = requests.get(url)
-    if response.status_code == 200:
-        dois_data = response.json()
-        items = dois_data['message']['items']
-        doi_metadata = []
-        for item in items:
-            metadata = {
-                "titulo": item['title'][0] if 'title' in item else None,
-                "doi": item['DOI'] if 'DOI' in item else None,
-                "autor": ", ".join([f"{author['given']} {author['family']}" for author in item['author']]) if 'author' in item else None,
-                "abstract": item['abstract'] if 'abstract' in item else None
-            }
-            doi_metadata.append(metadata)
-        return doi_metadata
-    else:
-        print("Error al obtener los últimos DOIs:", response.status_code)
-        return None
+def extract_paragraphs(text):
+    # Encuentra todos los bloques <jats:p>...</jats:p> y extrae el texto contenido en ellos
+    paragraphs = re.findall(r'<jats:p>(.*?)</jats:p>', text, re.DOTALL)
+    # Une los párrafos en un solo bloque de texto
+    merged_text = '\n'.join(paragraphs)
+    return merged_text
 
-if __name__ == "__main__":
-    num_dois = 3  # Cambia esto al número deseado de DOIs a obtener
-    latest_dois_metadata = fetch_latest_dois(num_dois)
-    if latest_dois_metadata:
-        # Inicializar sesión de Spark
-        spark = SparkSession.builder.appName("Fetch and Save DOIs").getOrCreate()
-        # Especificar el esquema del DataFrame
-        schema = StructType([
-            StructField("titulo", StringType(), nullable=True),
-            StructField("doi", StringType(), nullable=True),
-            StructField("autor", StringType(), nullable=True),
-            StructField("abstract", StringType(), nullable=True),
-            # Aquí puedes agregar más campos según la estructura de tus datos
-        ])
-        # Crear DataFrame a partir de los datos
-        doi_df = spark.createDataFrame(latest_dois_metadata, schema=schema)
-        # Escribir el DataFrame en HDFS en modo append
-        doi_df.write.mode("overwritte").parquet("/datos")
-        print(f"{num_dois} últimos DOIs guardados en HDFS")
+spark = SparkSession.builder.appName("Crossref_DOIs").getOrCreate()
+
+# Fecha desde la que deseas obtener los DOIs (por ejemplo, ayer)
+fecha_desde = datetime.datetime.now() - datetime.timedelta(days=1)
+
+# Instancia la clase Crossref
+cr = Crossref()
+
+# Busca los DOIs desde la fecha especificada hasta hoy
+resultados = cr.works(query=f"from-pub-date:{fecha_desde.strftime('%Y-%m-%d')}")
+
+schema = ['doi']
+data=[]
+# Imprime los DOIs encontrados
+for item in resultados['message']['items']:
+    doi = item['DOI']
+    #autores = ", ".join([f"{autor.get('given', 'No disponible')} {autor.get('family', 'No disponible')}" for autor in item.get('author', [])])
+    #resumen = extract_paragraphs(item.get('abstract', 'No disponible'))
+    #fecha_registro = item['created']['date-time']
+    data.append((doi))
+print(data)
+longitud_schema = len(schema)
+longitud_data = len(data[0])
+
+print(f"Longitud de schema: {longitud_schema}")
+print(f"Longitud de data: {longitud_data}")
+
+df = spark.createDataFrame(data, schema=schema)
+df.show()
+spark.stop()
