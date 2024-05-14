@@ -5,39 +5,41 @@ from pyspark.sql import SparkSession
 from pyspark.sql.types import StructType, StructField, StringType
 
 def extract_paragraphs(text):
-    # Encuentra todos los bloques <jats:p>...</jats:p> y extrae el texto contenido en ellos
     paragraphs = re.findall(r'<jats:p>(.*?)</jats:p>', text, re.DOTALL)
-    # Une los párrafos en un solo bloque de texto
     merged_text = '\n'.join(paragraphs)
     return merged_text
 
 spark = SparkSession.builder.appName("Crossref_DOIs").getOrCreate()
 
-# Fecha desde la que deseas obtener los DOIs (por ejemplo, ayer)
 fecha_desde = datetime.datetime.now() - datetime.timedelta(days=1)
 
-# Instancia la clase Crossref
 cr = Crossref()
 
-# Busca los DOIs desde la fecha especificada hasta hoy
 resultados = cr.works(query=f"from-pub-date:{fecha_desde.strftime('%Y-%m-%d')}")
 
-schema = ['doi']
 data=[]
-# Imprime los DOIs encontrados
+
 for item in resultados['message']['items']:
     doi = item['DOI']
-    #autores = ", ".join([f"{autor.get('given', 'No disponible')} {autor.get('family', 'No disponible')}" for autor in item.get('author', [])])
-    #resumen = extract_paragraphs(item.get('abstract', 'No disponible'))
-    #fecha_registro = item['created']['date-time']
-    data.append((doi))
-print(data)
-longitud_schema = len(schema)
-longitud_data = len(data[0])
+    autores = [f"{autor.get('given', '')} {autor.get('family', '')}" for autor in item.get('author', [])]
+    autores = ', '.join(autores) if autores else ''
+    resumen = extract_paragraphs(item.get('abstract', ''))
+    fecha_registro = item.get('created', {}).get('date-time', '')
+    data.append((doi, autores, resumen, fecha_registro))
 
-print(f"Longitud de schema: {longitud_schema}")
-print(f"Longitud de data: {longitud_data}")
+schema = StructType([
+    StructField("doi", StringType(), True),
+    StructField("authors", StringType(), True),
+    StructField("abstract", StringType(), True),
+    StructField("created_date", StringType(), True)
+])
 
 df = spark.createDataFrame(data, schema=schema)
-df.show()
+
+ruta_salida_hdfs = "hdfs:///datos"
+
+df.write.format("parquet").mode("overwrite").save(ruta_salida_hdfs)
+
+print("DataFrame almacenado en HDFS en:", ruta_salida_hdfs)
+
 spark.stop()
