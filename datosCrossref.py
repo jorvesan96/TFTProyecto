@@ -1,6 +1,5 @@
 from habanero import Crossref
 from datetime import datetime, timezone
-from hdfs import InsecureClient
 from pyspark.sql import SparkSession
 from pyspark.sql.types import StructType, StructField, StringType
 import re
@@ -8,40 +7,21 @@ import re
 # Configuración de HDFS y Spark
 HDFS_URL = 'hdfs://alpha.eii-cluster.org:9000'
 HDFS_USER = 'eii'
-HDFS_PATH_PROCESSED = '/datos/processed_crossref_data'
-LAST_UPDATE_PATH = '/datos/last_update.txt'
-
-# Inicializar cliente HDFS
-hdfs_client = InsecureClient(HDFS_URL, user=HDFS_USER)
-
+HDFS_PATH_PROCESSED = '/datos/input_data'
 
 def extract_paragraphs(text):
     paragraphs = re.findall(r'<jats:p>(.*?)</jats:p>', text, re.DOTALL)
     merged_text = '\n'.join(paragraphs)
     return merged_text
 
-# Función para obtener la fecha de la última actualización en formato timestamp
-def obtener_fecha_ultima_actualizacion():
-    try:
-        with hdfs_client.read(LAST_UPDATE_PATH) as reader:
-            fecha_str = reader.read().decode('utf-8').strip()
-            return int(datetime.strptime(fecha_str, '%Y-%m-%d').replace(tzinfo=timezone.utc).timestamp())
-    except:
-        return 946684800  # Fecha inicial por defecto (1 de enero de 2000 en timestamp)
-
-# Función para guardar la fecha de la última actualización en un archivo
-def guardar_fecha_ultima_actualizacion(fecha):
-    with hdfs_client.write(LAST_UPDATE_PATH, encoding='utf-8') as writer:
-        writer.write(fecha)
-
 # Función principal para descargar nuevos registros y procesarlos con Spark
 def descargar_y_procesar_datos():
     cr = Crossref()
-    ultima_fecha = obtener_fecha_ultima_actualizacion()
+    fecha_actual = datetime.utcnow().strftime('%Y-%m-%d')
     nuevos_registros = []
 
     # Consulta a la API de CrossRef
-    resultados = cr.works(filter={'from-update-date': ultima_fecha}, limit=10)  # Obtener solo 10 registros
+    resultados = cr.works(filter={'from-update-date': fecha_actual}, limit=10)  # Obtener solo 10 registros
 
     if 'message' in resultados and 'items' in resultados['message']:
         nuevos_registros = resultados['message']['items']
@@ -53,20 +33,21 @@ def descargar_y_procesar_datos():
         # Extraer campos relevantes de cada registro
         for item in nuevos_registros:
             doi = item['DOI']
+            titulo = item.get('title', [''])[0]
             autores = [f"{autor.get('given', '')} {autor.get('family', '')}" for autor in item.get('author', [])]
             autores = ', '.join(autores) if autores else ''
             resumen = extract_paragraphs(item.get('abstract', ''))
             fecha_registro = item.get('created', {}).get('date-time', '')
-            datos_procesados.append((doi, autores, resumen, fecha_registro))
+            datos_procesados.append((doi, titulo, autores, resumen, fecha_registro))
 
         # Inicializar SparkSession
         spark = SparkSession.builder \
             .appName("CrossRef Data Processing") \
-            .master("yarn") \
             .getOrCreate()  
 
         schema = StructType([
             StructField("doi", StringType(), True),
+            StructField("title", StringType(), True),
             StructField("authors", StringType(), True),
             StructField("abstract", StringType(), True),
             StructField("created_date", StringType(), True)
@@ -76,16 +57,13 @@ def descargar_y_procesar_datos():
         df = spark.createDataFrame(datos_procesados, schema=schema)
 
         # Mostrar algunos registros
-        df.show(truncate=False)
+        df.show()
 
         # Guardar resultados procesados en HDFS
-        df.write.mode('overwrite').parquet(f'hdfs://localhost:9000{HDFS_PATH_PROCESSED}')
+        df.write.mode('append').csv(f'hdfs://localhost:9000{HDFS_PATH_PROCESSED}')
 
         # Finalizar la sesión Spark
         spark.stop()
-
-        # Actualizar la fecha de la última actualización
-        guardar_fecha_ultima_actualizacion(datetime.now().strftime('%Y-%m-%d'))
 
         print(f'Se han añadido {len(nuevos_registros)} nuevos registros y se han guardado en HDFS.')
     else:
