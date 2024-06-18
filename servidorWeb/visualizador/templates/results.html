@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Resultados</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <h1>{{ chart_title }}</h1>
+
+    <div style="width: 80%; margin: auto;">
+        <canvas id="myChart" width="800" height="400"></canvas>
+    </div>
+
+    <script>
+        
+        var labels = JSON.parse('{{ labels|safe }}');
+        var values = JSON.parse('{{ values|safe }}');
+
+        
+        var modifiedValues = values.map(function(value) {
+            return value === 0 ? 0.01 : value;
+        });
+
+        
+        var ctx = document.getElementById('myChart').getContext('2d');
+        var myChart = new Chart(ctx, {
+            type: 'bar',  
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Sentimiento',
+                    data: modifiedValues,
+                    backgroundColor: modifiedValues.map(function(value) {
+                        return value >= 0 ? 'rgba(75, 192, 192, 0.2)' : 'rgba(255, 99, 132, 0.2)';
+                    }),
+                    borderColor: modifiedValues.map(function(value) {
+                        return value >= 0 ? 'rgba(75, 192, 192, 1)' : 'rgba(255, 99, 132, 1)';
+                    }),
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        min: -1,
+                        max: 1,
+                        ticks: {
+                            stepSize: 0.5  
+                        }
+                    }
+                },
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let value = context.raw;
+                                return value === 0.01 ? '0' : value;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
