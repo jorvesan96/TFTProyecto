@@ -1,4 +1,4 @@
 #!/bin/bash
 
-source /etc/environment
-spark-submit /home/eii/TFTProyecto/datosCrossref.py
+source /home/jorvesan/.bashrc
+spark-submit /home/jorvesan/TFTProyecto/datosCrossref.py
