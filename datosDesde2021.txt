@@ -1,0 +1,52 @@
+import os
+import json
+import csv
+
+def filtrar_por_fecha(date_parts):
+    # date_parts es una lista de partes de la fecha, por ejemplo [2021, 6, 15] para el 15 de junio de 2021
+    if len(date_parts) >= 3:
+        year = date_parts[0]
+        month = date_parts[1] if len(date_parts) >= 2 else 1
+        day = date_parts[2] if len(date_parts) >= 3 else 1
+        fecha = datetime.date(year, month, day)
+        return fecha >= datetime.date(2021, 1, 1) and fecha <= datetime.date(2024, 6, 1)
+    return False
+
+def procesar_archivos_json(directorio_json, directorio_destino):
+    if not os.path.exists(directorio_destino):
+        os.makedirs(directorio_destino)
+
+    for archivo_json in os.listdir(directorio_json):
+        if archivo_json.endswith('.json'):
+            ruta_json = os.path.join(directorio_json, archivo_json)
+            nombre_csv = os.path.splitext(archivo_json)[0] + '.csv'  # Nombre del archivo CSV basado en el JSON
+            ruta_csv = os.path.join(directorio_destino, nombre_csv)
+
+            with open(ruta_json, 'r', encoding='utf-8') as file:
+                data = json.load(file)
+                items = data.get('items', [])
+                with open(ruta_csv, 'w', newline='', encoding='utf-8') as csv_file:
+                    csv_writer = csv.writer(csv_file)
+                    csv_writer.writerow(['DOI', 'Title', 'Authors', 'Abstract', 'Published Date'])
+
+                    for item in items:
+                        indexed_data = item.get('indexed', {})
+                        date_parts = indexed_data.get('date-parts', [[]])[0]
+                        
+                        # Filtrar por fecha
+                        if filtrar_por_fecha(date_parts):
+                            doi = item.get('DOI', '')
+                            title_list = item.get('title', [''])
+                            title = title_list[0] if title_list else ''
+                            authors = ', '.join([f"{author.get('given', '')} {author.get('family', '')}" for author in item.get('author', [])])
+                            abstract = item.get('abstract', '')
+                            fecha_publicacion = '-'.join(map(str, date_parts)) if date_parts else ''
+                            
+                            csv_writer.writerow([doi, title, authors, abstract, fecha_publicacion])
+
+                    print(f'Archivo CSV procesado: {ruta_csv}')
+
+directorio_json = "/home/jorvesan/datosSinProcesar"
+directorio_destino = "/home/jorvesan/datosProcesados"
+procesar_archivos_json(directorio_json, directorio_destino)
+print("Proceso completado.")
