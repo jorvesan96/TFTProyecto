@@ -1,0 +1,80 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Word Cloud</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-wordcloud"></script>
+    <link rel="stylesheet" href="{% static 'css/word_cloud.css' %}">
+</head>
+<body>
+    <h1>Nube de Palabras</h1>
+    <canvas id="cloudMapChart"></canvas>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var data = JSON.parse('{{ data|safe }}');
+
+            // Transformar los valores para que sean más manejables
+            var transformedData = data.map(function(item) {
+                return {
+                    text: item.text,
+                    size: Math.sqrt(item.size) // Usar la raíz cuadrada para reducir el tamaño
+                };
+            });
+
+            var labels = transformedData.map(function(item) {
+                return item.text;
+            });
+
+            var values = transformedData.map(function(item) {
+                return item.size;
+            });
+
+            var originalValues = data.map(function(item) {
+                return item.size;
+            });
+
+            var config = {
+                type: 'wordCloud',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Frecuencia de Palabras',
+                        data: values
+                    }]
+                },
+                options: {
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            enabled: false  // Deshabilitar el tooltip
+                        },
+                        wordcloud: {
+                            font: 'Roboto, sans-serif',
+                            fontSizeMin: 12,
+                            fontSizeMax: 60,
+                            rotation: {
+                                min: 0,
+                                max: 0
+                            },
+                            spiral: 'rectangular',
+                            padding: 5,
+                        }
+                    }
+                }
+            };
+
+            var ctx = document.getElementById('cloudMapChart').getContext('2d');
+            var cloudMapChart = new Chart(ctx, config);
+	 });
+    </script>
+	<footer>
+	{% include 'footer.html' %}
+    </footer>
+
+</body>
+</html>

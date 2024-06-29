@@ -1,0 +1,74 @@
+body {
+    background-color: #0066a1;
+    text-align: center;
+    margin-top:20px;
+}
+.legend-container {
+    display: flex;
+    justify-content: center;
+    margin: 20px 0;
+}
+.legend-item {
+    display: flex;
+    align-items: center;
+    margin: 0 10px;
+}
+.legend-color {
+    width: 20px;
+    height: 20px;
+    margin-right: 5px;
+}
+.legend-positive {
+    background-color: rgba(75, 192, 192, 1);
+}
+.legend-negative {
+    background-color: rgba(255, 99, 132, 1);
+}
+.chart-container {
+    width: 80%;
+    margin: auto;
+    overflow-x: auto; 
+    white-space: nowrap; 
+    -webkit-overflow-scrolling: touch;
+}
+.chart-inner-container {
+    display: inline-block; 
+    min-width: 100%; 
+}
+footer {
+    padding: 5px;
+    text-align: center;
+    width: 100%;
+    position: fixed;
+    bottom: 0;
+    left: 0; 
+    background-color: #f4f4f4; 
+}
+
+.footer-content {
+    max-width: 1500px; 
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.footer-image {
+    max-width: 400px; 
+    height: auto; 
+}
+
+.footer-text {
+    margin-left: 10px; 
+}
+
+h1 {
+    color: white;
+    margin-top: 20px;
+}
+.chart-container{
+    margin-top: 20px;
+}
+.legend-item span {
+    color: white; /* Color blanco para el texto de la leyenda */
+}
