@@ -51,6 +51,8 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'servidorWeb.urls'
+SRF_COOKIE_SECURE = False
+CSRF_COOKIE_HTTPONLY = False
 
 TEMPLATES = [
     {

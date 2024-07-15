@@ -12,15 +12,15 @@
 <body>
     <h1>Nube de Palabras</h1>
     <canvas id="cloudMapChart"></canvas>
+
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             var data = JSON.parse('{{ data|safe }}');
 
-            // Transformar los valores para que sean más manejables
             var transformedData = data.map(function(item) {
                 return {
                     text: item.text,
-                    size: Math.sqrt(item.size) // Usar la raíz cuadrada para reducir el tamaño
+                    size: Math.sqrt(item.size) * 0.02
                 };
             });
 
@@ -29,10 +29,6 @@
             });
 
             var values = transformedData.map(function(item) {
-                return item.size;
-            });
-
-            var originalValues = data.map(function(item) {
                 return item.size;
             });
 
@@ -51,7 +47,7 @@
                             display: false
                         },
                         tooltip: {
-                            enabled: false  // Deshabilitar el tooltip
+                            enabled: false
                         },
                         wordcloud: {
                             font: 'Roboto, sans-serif',
@@ -70,11 +66,52 @@
 
             var ctx = document.getElementById('cloudMapChart').getContext('2d');
             var cloudMapChart = new Chart(ctx, config);
-	 });
-    </script>
-	<footer>
-	{% include 'footer.html' %}
-    </footer>
 
+            function checkForUpdates() {
+                fetch('/polling_endpoint/word_cloud/')
+                    .then(response => response.json())
+                    .then(data => {
+                        updateWordCloudPage(data.data);
+                    })
+                    .catch(error => console.error('Error al obtener datos:', error));
+            }
+
+            function updateWordCloudPage(data) {
+                console.log('Datos actualizados para word cloud:', data);
+
+                var transformedData = data.map(function(item) {
+                var parts = item.trim().split(','); 
+                if (parts.length !== 2) return null;
+
+                var text = parts[0].trim();
+                var size = parseFloat(parts[1].trim());
+
+                return {
+                    text: text,
+                    size: Math.sqrt(size) * 0.02
+                };
+            }).filter(function(item) {
+                return item !== null;
+            });
+
+            cloudMapChart.data.labels = transformedData.map(function(item) {
+                return item.text;
+            });
+
+            cloudMapChart.data.datasets[0].data = transformedData.map(function(item) {
+                return item.size;
+            });
+
+           cloudMapChart.update(); 
+        }
+
+            setInterval(checkForUpdates, 1200000); // 10 minutos
+        });
+    </script>
+
+    <footer>
+        {% include 'footer.html' %}
+    </footer>
 </body>
 </html>
+

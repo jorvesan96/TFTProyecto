@@ -26,73 +26,113 @@
             <canvas id="myChart" width="800" height="400"></canvas>
         </div>
     </div>
-<script>
-    var labels = JSON.parse('{{ labels|safe }}');
-    var values = JSON.parse('{{ values|safe }}');
 
-    var modifiedValues = values.map(function(value) {
-        return value === 0 ? 0.01 : value;
-    });
+    <script>
+        var labels = JSON.parse('{{ labels|safe }}');
+        var values = JSON.parse('{{ values|safe }}');
 
-    var ctx = document.getElementById('myChart').getContext('2d');
-    var myChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Sentimiento',
-                data: modifiedValues,
-                backgroundColor: modifiedValues.map(function(value) {
-                    return value >= 0 ? 'rgba(75, 192, 192, 0.2)' : 'rgba(255, 99, 132, 0.2)';
-                }),
-                borderColor: modifiedValues.map(function(value) {
-                    return value >= 0 ? 'rgba(75, 192, 192, 1)' : 'rgba(255, 99, 132, 1)';
-                }),
-                borderWidth: 1
-            }]
-        },
-        options: {
-            scales: {
-                x: {
-		    grid: {
-                        color: 'rgba(255, 255, 255, 0.6)'
-                    },
-                    ticks: {
-                        color: 'white' 
-                    }
-                },
-                y: {
-                    ticks: {
-                        color: 'white' 
-                    },
-                    grid: {
-                        color: 'rgba(255, 255, 255, 0.6)' 
-                    }
-                }
+        var modifiedValues = values.map(function(value) {
+            return value === 0 ? 0.01 : value;
+        });
+
+        var ctx = document.getElementById('myChart').getContext('2d');
+        var myChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Sentimiento',
+                    data: modifiedValues,
+                    backgroundColor: modifiedValues.map(function(value) {
+                        return value >= 0 ? 'rgba(75, 192, 192, 0.8)' : 'rgba(255, 99, 132, 0.8)';
+                    }),
+                    borderColor: modifiedValues.map(function(value) {
+                        return value >= 0 ? 'rgba(75, 192, 192, 1)' : 'rgba(255, 99, 132, 1)';
+                    }),
+                    borderWidth: 1
+                }]
             },
-            plugins: {
-                legend: {
-                    display: false // Ocultar la leyenda por defecto de Chart.js
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            let value = context.raw;
-                            return value === 0.01 ? '0' : value;
+            options: {
+                scales: {
+                    x: {
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.6)'
+                        },
+                        ticks: {
+                            color: 'white' 
+                        }
+                    },
+                    y: {
+                        ticks: {
+                            color: 'white' 
+                        },
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.6)' 
                         }
                     }
-                }
-            },
-            responsive: true,
-            maintainAspectRatio: false
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let value = context.raw;
+                                return value === 0.01 ? '0' : value;
+                            }
+                        }
+                    }
+                },
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+
+        function checkForUpdates() {
+            fetch(`/polling_endpoint/results/?palabra={{ palabra }}&fecha_inicio={{ fecha_inicio }}&fecha_fin={{ fecha_fin }}`)
+                .then(response => response.json())
+                .then(data => {
+                    updateResultsPage(data.data);
+                })
+                .catch(error => console.error('Error al obtener datos:', error));
         }
-    });
-</script>
+
+        function updateResultsPage(data) {
+            console.log('Datos actualizados para results:', data);
+            var newLabels = [];
+            var newValues = [];
+
+            for (var line of data) {
+                if (line.trim()) {
+                    var parts = line.split(', ');
+                    if (parts.length === 2) {
+                        newLabels.push(parts[0]);
+                        newValues.push(parseFloat(parts[1]));
+                    }
+                }
+            }
+
+            myChart.data.labels = newLabels.sort();
+            myChart.data.datasets[0].data = newValues.map(function(value) {
+                return value === 0 ? 0.01 : value;
+            });
+            myChart.data.datasets[0].backgroundColor = newValues.map(function(value) {
+                return value >= 0 ? 'rgba(75, 192, 192, 0.8)' : 'rgba(255, 99, 132, 0.8)';
+            });
+            myChart.data.datasets[0].borderColor = newValues.map(function(value) {
+                return value >= 0 ? 'rgba(75, 192, 192, 1)' : 'rgba(255, 99, 132, 1)';
+            });
+
+            myChart.update();
+        }
+
+        setInterval(checkForUpdates, 600000); // 10 minutos
+    </script>
 
     <footer>
-	{% include 'footer.html' %}
+        {% include 'footer.html' %}
     </footer>
-
 </body>
 </html>
 
