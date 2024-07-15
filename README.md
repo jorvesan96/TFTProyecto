@@ -105,7 +105,9 @@ Este proyecto implica el procesamiento de datos de CrossRef utilizando Spark. Se
    sbt assembly
 
 clean: Este comando limpia cualquier compilación previa del proyecto.
+
 compile: Compile el código Scala para asegurarse de que esté actualizado.
+
 assembly: Ensamble el código y todas las dependencias en un archivo JAR ejecutable (CrossrefDataProcessing.jar).
 
 
