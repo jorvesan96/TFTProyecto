@@ -83,7 +83,7 @@ El servidor web proporciona las siguientes funcionalidades:
 ### 5. `CrossrefTFT`
 
 #### Descripción
-Este proyecto implica el procesamiento de datos de CrossRef utilizando Spark. Se utiliza un script llamado run_processing.sh para automatizar el proceso de limpiar, compilar y ensamblar el código Scala en un archivo JAR ejecutable (CrossrefDataProcessing.jar). Este archivo JAR se utilizará luego con spark-submit para ejecutar el procesamiento de datos en un entorno distribuido.
+Este proyecto implica el procesamiento de datos de CrossRef utilizando Spark. Se utiliza un script llamado run_processing.sh para automatizar el proceso de limpiar, compilar y ensamblar el código Scala en un archivo JAR ejecutable (CrossrefDataProcessing.jar). Este archivo JAR se utilizará luego con spark-submit para ejecutar el procesamiento de datos en un entorno distribuido. Se debe tener en cuenta que el directorio está comprimido y como tiene un gran tamaño se ha subido gracias a Git LFS.
 
 #### Configuración
 1. **Requisitos Previos:**
